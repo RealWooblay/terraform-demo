@@ -9,6 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PROJECT_ID: ${{ secrets.PROJECT_ID }}
+    permissions:
+      id-token: write # required for Workload Identity Federation
+      contents: read # needed to read the repo code
 
     steps:
       - name: Check out code
@@ -19,7 +22,7 @@ jobs:
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/498855991921/locations/global/workloadIdentityPools/github-pool/providers/github-actions-provider"
-          service_account: "terraform-user@$authentic-wharf-452312-u7.iam.gserviceaccount.com"
+          service_account: "terraform-user@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
 
       # 2) Configure gcloud (optional, if you want to build/push images with gcloud)
       - name: Set gcloud project
