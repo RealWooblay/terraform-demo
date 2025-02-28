@@ -32,7 +32,7 @@ jobs:
         run: gcloud auth configure-docker
 
       - name: Build Docker image
-        run: docker build -t gcr.io/$PROJECT_ID/terraform-demo:latest .
+        run: docker build -t gcr.io/$PROJECT_ID/terraform-demo:latest ./app
 
       - name: Push Docker image
         run: docker push gcr.io/$PROJECT_ID/terraform-demo:latest
