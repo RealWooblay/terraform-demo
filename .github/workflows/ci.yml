@@ -3,12 +3,17 @@ name: CI
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
     env:
       PROJECT_ID: ${{ secrets.PROJECT_ID }}
+      REGION: us # Artifact Registry region
+      REPO_NAME: gcr-repo # Your Artifact Registry repository name
+
     permissions:
       id-token: write # required for Workload Identity Federation
       contents: read # needed to read the repo code
@@ -17,33 +22,37 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-      # 1) Auth to GCP via Workload Identity Federation
+      # 1️⃣ Authenticate to Google Cloud via Workload Identity Federation
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
           workload_identity_provider: "projects/498855991921/locations/global/workloadIdentityPools/github-pool/providers/github-actions-provider"
           service_account: "terraform-user@${{ env.PROJECT_ID }}.iam.gserviceaccount.com"
 
-      # 2) Configure gcloud (optional, if you want to build/push images with gcloud)
+      # 2️⃣ Set GCP project
       - name: Set gcloud project
         run: gcloud config set project $PROJECT_ID
 
-      - name: Configure Docker for GCR
-        run: gcloud auth configure-docker
+      # 3️⃣ Authenticate Docker with Artifact Registry
+      - name: Authenticate Docker with Artifact Registry
+        run: |
+          gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://us-docker.pkg.dev
 
+      # 4️⃣ Build and Push Docker Image to Artifact Registry
       - name: Build Docker image
-        run: docker build -t gcr.io/$PROJECT_ID/terraform-demo:latest ./app
+        run: docker build -t us-docker.pkg.dev/authentic-wharf-452312-u7/gcr-repo/terraform-demo:latest ./app
 
       - name: Push Docker image
-        run: docker push gcr.io/$PROJECT_ID/terraform-demo:latest
+        run: docker push us-docker.pkg.dev/authentic-wharf-452312-u7/gcr-repo/terraform-demo:latest
 
-      # 3) Set up Terraform
+      # 5️⃣ Set up Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
 
+      # 6️⃣ Run Terraform Init, Plan, and Apply
       - name: Terraform Init/Plan/Apply
         working-directory: ./infra
         run: |
           terraform init
-          terraform plan -var="project_id=$PROJECT_ID" -var="region=us-central1"
-          terraform apply -auto-approve -var="project_id=$PROJECT_ID" -var="region=us-central1"
+          terraform plan -var="project_id=$PROJECT_ID" -var="region=$REGION"
+          terraform apply -auto-approve -var="project_id=$PROJECT_ID" -var="region=$REGION"
