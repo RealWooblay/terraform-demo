@@ -45,6 +45,12 @@ jobs:
       - name: Push Docker image
         run: docker push us-docker.pkg.dev/authentic-wharf-452312-u7/gcr-repo/terraform-demo:latest
 
+      - name: Debug Authentication
+        run: |
+          gcloud auth list
+          gcloud projects list
+          gcloud iam service-accounts describe terraform-user@authentic-wharf-452312-u7.iam.gserviceaccount.com
+
       # 5️⃣ Set up Terraform
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v2
